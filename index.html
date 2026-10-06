@@ -1,0 +1,830 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>1분 명상 호흡</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="새를 따라 숨 쉬며 바위섬에서 등대까지 가는 1분 명상 호흡이에요.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://msmmx.github.io/breath-prototype/">
+<meta property="og:title" content="1분 명상 호흡">
+<meta property="og:description" content="새를 따라 숨 쉬며 바위섬에서 등대까지 가는 1분 명상 호흡이에요.">
+<meta property="og:image" content="https://msmmx.github.io/breath-prototype/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://msmmx.github.io/breath-prototype/og.png">
+<style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one-screen app. A night sea fills the frame; each step is a quiet panel over it, and the breathing step hands the whole frame to the canvas. Deliberately single-theme (night). */
+:root {
+  --ink: #081624;        /* deep night sea, page ground */
+  --deep: #0e2236;       /* raised panel */
+  --line: #21405a;       /* hairlines, inactive controls */
+  --mist: #dbe7ee;       /* primary text */
+  --tide: #8ea7b8;       /* secondary text */
+  --glass: #7fd6c2;      /* sea-glass accent: the breath line, primary action */
+  --lamp: #f5e3a8;       /* the collected light */
+  --font-display: "Gowun Batang", "Nanum Myeongjo", "Apple SD Gothic Neo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step-0: 0.875rem;
+  --step-1: 1rem;
+  --step-2: 1.25rem;
+  --step-3: 1.75rem;
+  --step-4: 2.5rem;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--ink);
+  color: var(--mist);
+  font-family: var(--font-body);
+  font-size: var(--step-1);
+  line-height: 1.6;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+#sea { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+.app { position: relative; height: 100%; display: flex; flex-direction: column; overflow-y: auto; padding-inline: 20px; }
+.panel {
+  width: 100%; max-width: 420px; margin: auto;
+  display: flex; flex-direction: column; gap: 20px;
+  padding-block: 28px;
+}
+.eyebrow { font-family: var(--font-data); font-size: 0.75rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--glass); }
+h1, h2 { font-family: var(--font-display); font-weight: 700; margin: 0; text-wrap: balance; line-height: 1.25; }
+h1 { font-size: var(--step-4); }
+h2 { font-size: var(--step-3); }
+p { margin: 0; color: var(--tide); max-width: 34em; }
+.lede { color: var(--mist); font-size: var(--step-2); font-family: var(--font-display); }
+
+.pattern { display: grid; grid-template-columns: 3fr 1fr 6fr; gap: 4px; }
+.pattern div { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pattern i { display: block; height: 6px; border-radius: 3px; background: var(--glass); }
+.pattern div:nth-child(2) i { opacity: 0.55; }
+.pattern div:nth-child(3) i { background: var(--line); }
+.pattern span { font-size: 0.75rem; color: var(--tide); white-space: nowrap; }
+.pattern b { font-family: var(--font-data); font-weight: 500; color: var(--mist); }
+
+/* 여정 지도: 바위섬 → 숨의 수만큼 점 → 등대 */
+.route { display: flex; flex-direction: column; gap: 8px; background: var(--deep); border-radius: 18px; padding: 18px 16px 14px; }
+.route-line { display: flex; align-items: flex-end; gap: 10px; }
+.route-line svg { flex: none; display: block; }
+.route-dots { flex: 1; min-width: 0; display: flex; justify-content: space-between; align-items: center; height: 2px; margin-bottom: 7px;
+  background: repeating-linear-gradient(90deg, var(--line) 0 4px, transparent 4px 9px); }
+.route-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--lamp); opacity: 0.85; flex: none; }
+.route-ends { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--tide); }
+.route-caption { font-size: var(--step-0); color: var(--mist); }
+.route-caption b { font-family: var(--font-data); font-weight: 500; color: var(--lamp); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+.seg button {
+  font: inherit; font-size: var(--step-0); color: var(--tide); background: none; border: 0;
+  padding: 6px 14px; border-radius: 999px; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--deep); color: var(--mist); }
+.toggle {
+  font: inherit; font-size: var(--step-0); color: var(--tide); background: none;
+  border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer;
+}
+.toggle[aria-pressed="true"] { color: var(--mist); border-color: var(--glass); }
+
+.primary {
+  font: inherit; font-weight: 600; font-size: var(--step-1);
+  background: var(--glass); color: var(--ink); border: 0; border-radius: 14px;
+  padding: 16px 20px; cursor: pointer; width: 100%;
+}
+.ghost {
+  font: inherit; font-size: var(--step-0); background: none; border: 0; color: var(--tide);
+  padding: 10px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px;
+}
+button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 3px; }
+
+.note { font-size: 0.8125rem; color: var(--tide); border-top: 1px solid var(--line); padding-top: 14px; }
+
+/* mood scale */
+.scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.scale button {
+  font: inherit; aspect-ratio: 1; max-width: 100%;
+  background: var(--deep); border: 1px solid var(--line); border-radius: 50%;
+  color: var(--mist); font-family: var(--font-data); font-size: var(--step-2);
+  cursor: pointer; display: grid; place-items: center;
+}
+.scale button:hover { border-color: var(--glass); }
+.scale-ends { display: flex; justify-content: space-between; font-size: 0.8125rem; color: var(--tide); }
+
+/* breathing HUD */
+.hud { position: fixed; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between;
+  padding: calc(env(safe-area-inset-top, 0px) + 28px) 20px calc(env(safe-area-inset-bottom, 0px) + 24px); }
+.cue { text-align: center; display: flex; flex-direction: column; gap: 2px; align-items: center; }
+.cue-word { font-family: var(--font-display); font-size: var(--step-4); font-weight: 700; line-height: 1.2; transition: opacity .3s; }
+.cue-how { font-size: var(--step-0); color: var(--tide); }
+/* 숫자 카운트다운 대신 이번 동작이 얼마나 남았는지 조용히 채워지는 선 */
+.cue-bar { width: 120px; max-width: 40vw; height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; margin-top: 10px; }
+.cue-bar i { display: block; height: 100%; width: 0; background: var(--glass); }
+.hud-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.hud-top { display: flex; flex-direction: column; gap: 18px; }
+.meta { display: flex; justify-content: center; font-size: 0.8125rem; color: var(--tide); }
+.meta b { font-family: var(--font-data); font-weight: 500; color: var(--mist); font-variant-numeric: tabular-nums; }
+.cue-note { font-size: 0.8125rem; color: var(--lamp); border: 1px solid rgba(245,227,168,0.35); border-radius: 999px; padding: 2px 12px; margin-bottom: 6px; }
+.lights { font-family: var(--font-data); color: var(--lamp); font-variant-numeric: tabular-nums; font-size: var(--step-0); white-space: nowrap; }
+.segs { flex: 1; display: flex; gap: 3px; min-width: 0; }
+.segs i { flex: 1; height: 6px; border-radius: 3px; background: var(--line); transition: background .4s; }
+.segs i.on { background: var(--lamp); }
+.segs i.now { background: rgba(127,214,194,0.55); }
+.stop { pointer-events: auto; font: inherit; font-size: var(--step-0); color: var(--tide); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+
+/* result */
+.change { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; background: var(--deep); border-radius: 18px; padding: 22px 16px; }
+.change div { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.change small { font-size: 0.75rem; color: var(--tide); }
+.change strong { font-family: var(--font-data); font-size: var(--step-4); font-weight: 500; line-height: 1; }
+.change .after strong { color: var(--glass); }
+.change .arrow { color: var(--tide); font-size: var(--step-2); }
+.stats { display: flex; gap: 20px; flex-wrap: wrap; font-size: var(--step-0); color: var(--tide); }
+.stats b { color: var(--mist); font-family: var(--font-data); font-weight: 500; }
+.stats .lamp b { color: var(--lamp); }
+.ask { display: flex; flex-direction: column; gap: 10px; }
+.ask p { color: var(--mist); }
+.thanks { color: var(--glass); font-size: var(--step-0); }
+.survey { display: block; box-sizing: border-box; text-align: center; text-decoration: none; }
+.survey:focus-visible { outline: 2px solid var(--lamp); outline-offset: 3px; }
+.more { font-size: 0.8125rem; color: var(--tide); }
+.more summary { cursor: pointer; width: fit-content; text-decoration: underline; text-underline-offset: 3px; }
+.more p { font-size: 0.8125rem; margin-top: 8px; }
+
+@media (prefers-reduced-motion: reduce) { .cue-word { transition: none; } }
+</style>
+
+<canvas id="sea" aria-hidden="true"></canvas>
+
+<main class="app">
+  <!-- 1. 시작 -->
+  <section class="panel" id="s-intro">
+    <span class="eyebrow">1분 명상 호흡</span>
+    <h1>등대까지, 숨으로</h1>
+    <p class="lede">길 잃은 바닷새를 숨으로 등대까지 데려다주세요.</p>
+    <div class="route" aria-label="여정: 바위섬에서 등대까지">
+      <div class="route-line">
+        <svg width="34" height="22" viewBox="0 0 34 22" aria-hidden="true"><path d="M1 21 L7 10 L13 13 L19 4 L27 12 L33 21 Z" fill="#21405a"/><path d="M15 8 q3 -3 6 0 M18 8 q3 -3 6 0" stroke="#dbe7ee" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>
+        <div class="route-dots" id="route-dots"></div>
+        <svg width="22" height="34" viewBox="0 0 22 34" aria-hidden="true"><circle cx="11" cy="6" r="6" fill="#f5e3a8" opacity="0.35"/><circle cx="11" cy="6" r="2.6" fill="#f5e3a8"/><path d="M7 33 L8.6 10 H13.4 L15 33 Z" fill="#8ea7b8"/><path d="M8 18 H14 M7.6 25 H14.4" stroke="#0e2236" stroke-width="2"/></svg>
+      </div>
+      <div class="route-ends"><span>바위섬</span><span>등대</span></div>
+      <span class="route-caption" id="route-caption">숨 <b>6</b>번 · 약 1분</span>
+    </div>
+    <div class="row">
+      <div class="seg" role="group" aria-label="세션 길이">
+        <button type="button" id="len-1" data-min="1" aria-pressed="true">1분</button>
+        <button type="button" id="len-3" data-min="3" aria-pressed="false">3분</button>
+        <button type="button" id="len-5" data-min="5" aria-pressed="false">5분</button>
+      </div>
+      <button type="button" class="toggle" id="sound" aria-pressed="true" aria-label="소리 켜짐">소리 켜짐</button>
+    </div>
+    <button type="button" class="primary" id="go">시작하기</button>
+    <details class="more">
+      <summary>이 호흡법은?</summary>
+      <p>'주기적 한숨'이에요. 코로 들이쉬고, 한 번 더 짧게 채운 뒤, 입으로 길게 내쉬어요. 스탠퍼드 연구에서 하루 5분씩 한 달 동안 했을 때 기분이 가장 크게 좋아진 호흡법이에요.</p>
+      <p>임신 중이거나 심장·호흡기 질환이 있다면 먼저 전문가와 상의하세요.</p>
+    </details>
+  </section>
+
+  <!-- 2. 호흡 전 기분 -->
+  <section class="panel" id="s-before" hidden>
+    <h2>지금 얼마나 긴장돼 있어요?</h2>
+    <div class="scale" id="scale-before">
+      <button type="button" id="b1" data-v="1">1</button>
+      <button type="button" id="b2" data-v="2">2</button>
+      <button type="button" id="b3" data-v="3">3</button>
+      <button type="button" id="b4" data-v="4">4</button>
+      <button type="button" id="b5" data-v="5">5</button>
+    </div>
+    <div class="scale-ends"><span>편안해요</span><span>많이 긴장돼요</span></div>
+    <button type="button" class="ghost" id="skip-before">건너뛰기</button>
+  </section>
+
+  <!-- 4. 호흡 후 기분 -->
+  <section class="panel" id="s-after" hidden>
+    <h2>지금은 어때요?</h2>
+    <div class="scale" id="scale-after">
+      <button type="button" id="a1" data-v="1">1</button>
+      <button type="button" id="a2" data-v="2">2</button>
+      <button type="button" id="a3" data-v="3">3</button>
+      <button type="button" id="a4" data-v="4">4</button>
+      <button type="button" id="a5" data-v="5">5</button>
+    </div>
+    <div class="scale-ends"><span>편안해요</span><span>많이 긴장돼요</span></div>
+  </section>
+
+  <!-- 5. 결과 -->
+  <section class="panel" id="s-result" hidden>
+    <span class="eyebrow" id="journey">여정 1단계</span>
+    <h2 id="result-title">조금 가벼워졌네요</h2>
+    <div class="change" id="change">
+      <div><small>시작 전</small><strong id="r-before">4</strong></div>
+      <span class="arrow" aria-hidden="true">→</span>
+      <div class="after"><small>지금</small><strong id="r-after">2</strong></div>
+    </div>
+    <a class="primary survey" id="survey" href="https://docs.google.com/forms/d/e/1FAIpQLSe0jeJCcatr6Qa7Fwgc_lza5fFfeT0sfbV9rPw8QMC35zP29w/viewform" target="_blank" rel="noopener">1분 설문 남기기 ↗</a>
+  </section>
+</main>
+
+<!-- 3. 호흡 비행 HUD -->
+<div class="hud" id="hud" hidden>
+  <div class="hud-top">
+    <div class="meta">
+      <span id="hud-goal">등대까지 숨 <b id="hud-count">6</b>번</span>
+    </div>
+    <div class="cue" aria-live="polite">
+      <span class="cue-note" id="cue-note" hidden></span>
+      <span class="cue-word" id="cue-word">준비</span>
+      <span class="cue-how" id="cue-how">편하게 앉아서 새를 바라보세요</span>
+      <span class="cue-bar" aria-hidden="true"><i id="cue-bar"></i></span>
+    </div>
+  </div>
+  <div class="hud-foot">
+    <span class="lights">빛 <span id="lights">0</span></span>
+    <div class="segs" id="segs" aria-hidden="true"></div>
+    <button type="button" class="stop" id="stop">그만하기</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ---------- 호흡 엔진: 월드 = 패턴 설정값 ----------
+  const WORLD = {
+    id: 'sea',
+    pattern: [
+      { kind: 'inhale', sec: 3, from: 0,    to: 0.75, word: '들이쉬기',   how: '코로 천천히' },
+      { kind: 'topup',  sec: 1, from: 0.75, to: 1,    word: '한 번 더',   how: '코로 짧게 채우기' },
+      { kind: 'exhale', sec: 6, from: 1,    to: 0,    word: '길게 내쉬기', how: '입으로 끝까지' },
+    ],
+  };
+  const CYCLE = WORLD.pattern.reduce((s, p) => s + p.sec, 0); // 10초
+  const LEAD = 3; // 시작 전 준비 시간
+
+  const ease = t => 0.5 - Math.cos(Math.PI * t) / 2;
+
+  // 세션 시작 기준 t초에서의 상태
+  function phaseAt(t, cycles) {
+    if (t < LEAD) return { height: 0, phase: null, left: LEAD - t, cycle: -1 };
+    const total = cycles * CYCLE;
+    const s = t - LEAD;
+    if (s >= total) return { height: 0, phase: null, left: 0, cycle: cycles, done: true };
+    const cycle = Math.floor(s / CYCLE);
+    let r = s - cycle * CYCLE;
+    for (const p of WORLD.pattern) {
+      if (r < p.sec) {
+        const k = ease(r / p.sec);
+        return { height: p.from + (p.to - p.from) * k, phase: p, left: p.sec - r, cycle };
+      }
+      r -= p.sec;
+    }
+  }
+  // 화면에 그릴 곡선용 (준비/종료 구간은 0)
+  const heightAt = (t, cycles) => {
+    if (t < LEAD || t > LEAD + cycles * CYCLE) return 0;
+    return phaseAt(t, cycles).height;
+  };
+
+  // ---------- 상태 ----------
+  const $ = id => document.getElementById(id);
+  const screens = ['s-intro', 's-before', 's-after', 's-result'];
+  const show = id => { screens.forEach(s => $(s).hidden = s !== id); $('hud').hidden = id !== 'hud'; };
+
+  let minutes = 1, soundOn = true;
+  let moodBefore = null, moodAfter = null;
+  let running = false, t0 = 0, cycles = 6, collected = 0, lastPhaseKey = '';
+  let wakeLock = null;
+
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  };
+
+  // ---------- 소리 ----------
+  let ac = null, master = null;
+  // iOS는 무음 스위치가 켜져 있으면 웹 오디오를 꺼버린다.
+  // 오디오 세션을 '재생'으로 바꾸고, 무음 <audio>를 함께 틀어두면 무음 모드에서도 들린다.
+  let unlockEl = null;
+  function silentWavUri() {
+    const n = 4000, b = new Uint8Array(44 + n), v = new DataView(b.buffer);
+    const s = (o, str) => [...str].forEach((c, i) => b[o + i] = c.charCodeAt(0));
+    s(0, 'RIFF'); v.setUint32(4, 36 + n, true); s(8, 'WAVEfmt ');
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true);
+    s(36, 'data'); v.setUint32(40, n, true); b.fill(128, 44);
+    let bin = ''; b.forEach(x => bin += String.fromCharCode(x));
+    return 'data:audio/wav;base64,' + btoa(bin);
+  }
+  function unlockSilentMode() {
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch {}
+    try {
+      if (!unlockEl) {
+        unlockEl = new Audio(silentWavUri());
+        unlockEl.loop = true; unlockEl.setAttribute('playsinline', '');
+      }
+      unlockEl.play().catch(() => {});
+    } catch {}
+  }
+
+  function audioInit() {
+    unlockSilentMode();
+    if (ac) return;
+    try {
+      ac = new (window.AudioContext || window.webkitAudioContext)();
+      master = ac.createGain(); master.gain.value = 0.18; master.connect(ac.destination);
+    } catch { ac = null; }
+  }
+  // 안내음: 멜로디 대신 숨소리 같은 바람(걸러낸 노이즈)과 싱잉볼
+  let noiseBuf = null;
+  function noise() {
+    if (!noiseBuf) {
+      const len = ac.sampleRate * 2;
+      noiseBuf = ac.createBuffer(1, len, ac.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const s = ac.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
+    return s;
+  }
+  // 바람 한 줄기: 들숨은 점점 커지며 밝아지고, 날숨은 크게 시작해 어둡게 잦아든다
+  function breathSound(f1, f2, dur, peak, rising) {
+    if (!ac || !soundOn) return;
+    const now = ac.currentTime, src = noise();
+    const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 0.9;
+    bp.frequency.setValueAtTime(f1, now);
+    bp.frequency.exponentialRampToValueAtTime(f2, now + dur);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, now);
+    if (rising) {
+      g.gain.exponentialRampToValueAtTime(peak, now + dur * 0.85);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + dur + 0.4);
+    } else {
+      g.gain.exponentialRampToValueAtTime(peak, now + 0.5);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    }
+    src.connect(bp); bp.connect(g); g.connect(master);
+    src.start(now); src.stop(now + dur + 0.5);
+  }
+  // 싱잉볼: 배음이 어긋난 사인파들이 천천히 울리며 사라진다
+  function bowl(f, dur, peak) {
+    if (!ac || !soundOn) return;
+    const now = ac.currentTime;
+    [[1, 1], [2.76, 0.35], [5.4, 0.12]].forEach(([ratio, amp]) => [-0.6, 0.6].forEach(beat => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.frequency.value = f * ratio + beat;
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(peak * amp, now + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + dur / ratio ** 0.4);
+      o.connect(g); g.connect(master); o.start(now); o.stop(now + dur + 0.1);
+    }));
+  }
+  const cueSound = kind => {
+    if (kind === 'inhale') breathSound(300, 1000, 3, 0.55, true);
+    if (kind === 'topup') breathSound(1000, 1400, 1, 0.4, true);
+    if (kind === 'exhale') breathSound(1300, 240, 6, 0.55, false);
+  };
+  const chime = () => bowl(293.66, 5, 0.2);     // 빛 하나: D4 볼
+  const arrive = () => bowl(146.83, 8, 0.32);   // 등대 도착: 한 옥타브 낮은 볼
+
+  // ---------- 배경음: 파도 소리 + 숨에 따라 열리고 닫히는 화음 패드 ----------
+  // 외부 음원 없이 Web Audio로 직접 합성한다. 화음은 20초(호흡 두 번)마다 D → Bm → G → A로 천천히 미끄러진다.
+  const CHORDS = [
+    [146.83, 185.0, 220.0, 329.63],   // D (add9)
+    [123.47, 146.83, 185.0, 293.66],  // Bm
+    [98.0, 146.83, 185.0, 246.94],    // Gmaj7
+    [110.0, 164.81, 220.0, 277.18],   // A
+  ];
+  let bgmOn = true, bgm = null, lastSwell = 0;
+
+  function startBgm(totalSec) {
+    if (!ac || !bgmOn) return;
+    stopBgm(true);
+    const now = ac.currentTime, nodes = [];
+    const bus = ac.createGain();
+    bus.gain.setValueAtTime(0.0001, now);
+    bus.gain.exponentialRampToValueAtTime(0.45, now + 4);
+    bus.connect(master);
+
+    // 파도: 브라운 노이즈를 낮게 걸러서, 12초 주기로 밀려왔다 빠지게
+    const len = ac.sampleRate * 4, buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0);
+    let v = 0;
+    for (let i = 0; i < len; i++) { v = (v + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = v * 3.5; }
+    const noise = ac.createBufferSource(); noise.buffer = buf; noise.loop = true;
+    const waveF = ac.createBiquadFilter(); waveF.type = 'lowpass'; waveF.frequency.value = 650;
+    const waveG = ac.createGain(); waveG.gain.value = 0.22;
+    const lfo = ac.createOscillator(), lfoG = ac.createGain();
+    lfo.frequency.value = 1 / 12; lfoG.gain.value = 0.16;
+    lfo.connect(lfoG); lfoG.connect(waveG.gain);
+    noise.connect(waveF); waveF.connect(waveG); waveG.connect(bus);
+    noise.start(now); lfo.start(now); nodes.push(noise, lfo);
+
+    // 패드: 음마다 살짝 어긋난 삼각파 두 개
+    const padF = ac.createBiquadFilter(); padF.type = 'lowpass'; padF.frequency.value = 420; padF.Q.value = 0.6;
+    const padG = ac.createGain(); padG.gain.value = 0.2;
+    padF.connect(padG); padG.connect(bus);
+    const voices = CHORDS[0].map(f => [-5, 5].map(cents => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'triangle'; o.frequency.value = f; o.detune.value = cents; g.gain.value = 0.22;
+      o.connect(g); g.connect(padF); o.start(now); nodes.push(o);
+      return o;
+    }));
+    const steps = Math.ceil((totalSec + 10) / 20);
+    for (let i = 1; i <= steps; i++) {
+      const chord = CHORDS.at(i % CHORDS.length);
+      voices.forEach((pair, k) => pair.forEach(o => o.frequency.setTargetAtTime(chord.at(k), now + i * 20, 1.5)));
+    }
+    bgm = { bus, nodes, padF };
+  }
+
+  function stopBgm(immediate) {
+    if (!bgm || !ac) return;
+    const now = ac.currentTime, b = bgm, fade = immediate ? 0.1 : 3.5;
+    bgm = null;
+    b.bus.gain.cancelScheduledValues(now);
+    b.bus.gain.setValueAtTime(Math.max(b.bus.gain.value, 0.0001), now);
+    b.bus.gain.exponentialRampToValueAtTime(0.0001, now + fade);
+    b.nodes.forEach(n => { try { n.stop(now + fade + 0.1); } catch {} });
+  }
+
+  // 들이쉬면 화음이 밝게 열리고, 내쉬면 어둡게 닫힌다
+  function swell(height) {
+    if (!bgm) return;
+    const now = ac.currentTime;
+    if (now - lastSwell < 0.1) return;
+    lastSwell = now;
+    bgm.padF.frequency.setTargetAtTime(380 + 1400 * height, now, 0.25);
+  }
+  const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch {} };
+
+  // ---------- 캔버스 ----------
+  const cv = $('sea'), cx = cv.getContext('2d');
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let W = 0, H = 0, dpr = 1;
+  const stars = Array.from({ length: 70 }, (_, i) => ({ x: (i * 97.3) % 1, y: ((i * 53.7) % 1) * 0.55, r: 0.4 + ((i * 31) % 10) / 12 }));
+  const sparks = [];
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = cv.clientWidth; H = cv.clientHeight;
+    cv.width = W * dpr; cv.height = H * dpr;
+    cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  addEventListener('resize', resize); resize();
+
+  // 진행도에 따라 밤바다 → 새벽으로 하늘이 바뀐다
+  const NIGHT = [[6, 17, 29], [11, 32, 52], [15, 44, 63]];
+  const DAWN = [[16, 36, 64], [52, 80, 122], [211, 154, 122]];
+  const mix = (a, b, k) => a.map((v, i) => Math.round(v + (b[i] - v) * k));
+  const rgb = c => `rgb(${c[0]},${c[1]},${c[2]})`;
+
+  function drawLighthouse(p, now) {
+    // 목적지: 수평선 끝에서 점점 다가오는 등대
+    const sea = H * 0.86, s = 0.55 + 0.45 * p;
+    const x = W * (0.98 - 0.2 * p), h = 78 * s, w = 16 * s;
+    const lit = 0.35 + 0.65 * p;
+    if (!reduceMotion) {
+      const a = now / 1600;
+      cx.save(); cx.translate(x, sea - h);
+      cx.rotate(Math.sin(a) * 0.5 + Math.PI);
+      const beam = cx.createLinearGradient(0, 0, W * 0.5, 0);
+      beam.addColorStop(0, `rgba(245,227,168,${0.22 * lit})`); beam.addColorStop(1, 'rgba(245,227,168,0)');
+      cx.fillStyle = beam;
+      cx.beginPath(); cx.moveTo(0, 0); cx.lineTo(W * 0.5, -40 * s); cx.lineTo(W * 0.5, 40 * s); cx.closePath(); cx.fill();
+      cx.restore();
+    }
+    cx.fillStyle = '#0a1826';
+    cx.beginPath();
+    cx.moveTo(x - w / 2, sea); cx.lineTo(x - w / 3, sea - h); cx.lineTo(x + w / 3, sea - h); cx.lineTo(x + w / 2, sea);
+    cx.closePath(); cx.fill();
+    const glow = cx.createRadialGradient(x, sea - h - 4 * s, 0, x, sea - h - 4 * s, 22 * s);
+    glow.addColorStop(0, `rgba(245,227,168,${lit})`); glow.addColorStop(1, 'rgba(245,227,168,0)');
+    cx.fillStyle = glow; cx.beginPath(); cx.arc(x, sea - h - 4 * s, 22 * s, 0, Math.PI * 2); cx.fill();
+  }
+
+  function drawIsland(p) {
+    // 출발지: 새가 떠나온 바위섬이 뒤로 멀어진다
+    const sea = H * 0.86, { birdX } = geo();
+    const x = birdX - 30 - p * W * 3;
+    if (x < -120) return;
+    cx.fillStyle = '#0a1826';
+    cx.beginPath();
+    cx.moveTo(x - 70, sea + 4); cx.lineTo(x - 44, sea - 26); cx.lineTo(x - 22, sea - 18);
+    cx.lineTo(x, sea - 44); cx.lineTo(x + 26, sea - 20); cx.lineTo(x + 56, sea + 4); cx.closePath(); cx.fill();
+  }
+
+  function drawBackdrop(now, p) {
+    const k = p == null ? 0 : ease(p);
+    const sky = NIGHT.map((c, i) => mix(c, DAWN.at(i), k));
+    const g = cx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, rgb(sky[0])); g.addColorStop(0.55, rgb(sky[1])); g.addColorStop(0.86, rgb(sky[2]));
+    cx.fillStyle = g; cx.fillRect(0, 0, W, H);
+    for (const s of stars) {
+      const tw = reduceMotion ? 0.6 : 0.45 + 0.35 * Math.sin(now / 1400 + s.x * 40);
+      cx.fillStyle = `rgba(219,231,238,${tw * 0.6 * (1 - k * 0.85)})`;
+      cx.beginPath(); cx.arc(s.x * W, s.y * H, s.r, 0, Math.PI * 2); cx.fill();
+    }
+    if (p != null) { drawLighthouse(p, now); drawIsland(running ? p : 0); }
+    // 수평선과 물결
+    const sea = H * 0.86;
+    for (let k = 0; k < 3; k++) {
+      cx.beginPath();
+      const amp = 4 + k * 3, y0 = sea + k * 14, sp = reduceMotion ? 0 : now / (2600 - k * 500);
+      cx.moveTo(0, H);
+      for (let x = 0; x <= W; x += 8) cx.lineTo(x, y0 + Math.sin(x / (90 + k * 30) + sp) * amp);
+      cx.lineTo(W, H); cx.closePath();
+      cx.fillStyle = `rgba(20,58,80,${0.35 + k * 0.2})`; cx.fill();
+    }
+  }
+
+  // 화면 좌표
+  const geo = () => {
+    const base = H * 0.74, amp = Math.min(H * 0.42, 340);
+    const birdX = Math.min(W * 0.3, 160), pps = Math.max(W / 7, 46); // 초당 픽셀
+    return { base, amp, birdX, pps };
+  };
+
+  function drawPath(t) {
+    const { base, amp, birdX, pps } = geo();
+    const y = tt => base - heightAt(tt, cycles) * amp;
+    // 지나온 길
+    cx.lineWidth = 3; cx.lineCap = 'round';
+    cx.strokeStyle = 'rgba(127,214,194,0.9)';
+    cx.beginPath();
+    for (let x = 0; x <= birdX; x += 3) { const tt = t + (x - birdX) / pps; x ? cx.lineTo(x, y(tt)) : cx.moveTo(x, y(tt)); }
+    cx.stroke();
+    // 앞으로 갈 길
+    cx.setLineDash([2, 9]);
+    cx.strokeStyle = 'rgba(127,214,194,0.55)';
+    cx.beginPath();
+    for (let x = birdX; x <= W + 10; x += 3) { const tt = t + (x - birdX) / pps; x === birdX ? cx.moveTo(x, y(tt)) : cx.lineTo(x, y(tt)); }
+    cx.stroke(); cx.setLineDash([]);
+
+    // 빛: 각 호흡이 끝나는 지점(날숨 끝)
+    for (let c = 0; c < cycles; c++) {
+      const tt = LEAD + (c + 1) * CYCLE;
+      const x = birdX + (tt - t) * pps;
+      if (x < birdX - 2 || x > W + 20) continue;
+      const pulse = reduceMotion ? 1 : 1 + 0.15 * Math.sin(t * 3 + c);
+      const gy = base - 26;
+      const rg = cx.createRadialGradient(x, gy, 0, x, gy, 18 * pulse);
+      rg.addColorStop(0, 'rgba(245,227,168,0.95)'); rg.addColorStop(1, 'rgba(245,227,168,0)');
+      cx.fillStyle = rg; cx.beginPath(); cx.arc(x, gy, 18 * pulse, 0, Math.PI * 2); cx.fill();
+    }
+    return { birdY: y(t), slope: (y(t + 0.05) - y(t - 0.05)) / (0.1 * pps) };
+  }
+
+  // 호흡마다 다른 풍경이 지나간다: 같은 동작이 반복돼도 매번 새로 볼 게 있도록
+  const SIGHTS = ['buoy', 'gulls', 'boat', 'whale', 'rock', 'fish'];
+  function drawSights(t, now) {
+    const { birdX, pps } = geo(), sea = H * 0.86, dark = '#0a1826';
+    for (let c = 0; c < cycles; c++) {
+      const x = birdX + 40 + (LEAD + c * CYCLE + 6 - t) * pps * 0.6;
+      if (x < -80 || x > W + 80) continue;
+      const near = Math.max(0, 1 - Math.abs(x - birdX - 40) / (W * 0.45)); // 새 근처일수록 1
+      const kind = SIGHTS.at(c % SIGHTS.length);
+      cx.save();
+      if (kind === 'buoy') {
+        cx.fillStyle = dark; cx.fillRect(x - 2, sea - 26, 4, 28);
+        const on = reduceMotion || Math.sin(now / 300) > 0;
+        cx.fillStyle = on ? 'rgba(245,227,168,0.95)' : 'rgba(245,227,168,0.3)';
+        cx.beginPath(); cx.arc(x, sea - 29, 3.5, 0, Math.PI * 2); cx.fill();
+      } else if (kind === 'gulls') {
+        cx.strokeStyle = 'rgba(219,231,238,0.7)'; cx.lineWidth = 1.6; cx.lineCap = 'round';
+        const f = reduceMotion ? 3 : 3 + Math.sin(now / 180) * 2;
+        [[0, 0], [16, -10], [30, 4]].forEach(([dx, dy]) => {
+          const gx = x + dx, gy = H * 0.3 + dy;
+          cx.beginPath(); cx.moveTo(gx - 6, gy); cx.quadraticCurveTo(gx - 3, gy - f, gx, gy); cx.quadraticCurveTo(gx + 3, gy - f, gx + 6, gy); cx.stroke();
+        });
+      } else if (kind === 'boat') {
+        cx.fillStyle = dark;
+        cx.beginPath(); cx.moveTo(x - 20, sea - 6); cx.lineTo(x + 20, sea - 6); cx.lineTo(x + 13, sea + 2); cx.lineTo(x - 13, sea + 2); cx.closePath(); cx.fill();
+        cx.fillRect(x - 1, sea - 38, 2, 32);
+        cx.fillStyle = 'rgba(219,231,238,0.55)';
+        cx.beginPath(); cx.moveTo(x + 2, sea - 36); cx.lineTo(x + 18, sea - 9); cx.lineTo(x + 2, sea - 9); cx.closePath(); cx.fill();
+      } else if (kind === 'whale') {
+        const rise = 34 * near; // 새가 지나갈 때 꼬리가 올라온다
+        cx.fillStyle = dark;
+        cx.beginPath();
+        cx.moveTo(x - 4, sea + 4); cx.lineTo(x - 3, sea - rise + 8);
+        cx.quadraticCurveTo(x - 20, sea - rise + 2, x - 26, sea - rise - 8);
+        cx.quadraticCurveTo(x - 8, sea - rise - 2, x, sea - rise + 4);
+        cx.quadraticCurveTo(x + 8, sea - rise - 2, x + 26, sea - rise - 8);
+        cx.quadraticCurveTo(x + 20, sea - rise + 2, x + 3, sea - rise + 8);
+        cx.lineTo(x + 4, sea + 4); cx.closePath(); cx.fill();
+      } else if (kind === 'rock') {
+        cx.fillStyle = dark;
+        cx.beginPath(); cx.moveTo(x - 30, sea + 4); cx.lineTo(x - 14, sea - 16); cx.lineTo(x + 2, sea - 10); cx.lineTo(x + 14, sea - 22); cx.lineTo(x + 32, sea + 4); cx.closePath(); cx.fill();
+      } else if (kind === 'fish') {
+        const u = Math.min(1, Math.max(0, 0.5 - (x - birdX - 40) / 160)); // 지나가는 동안 물 위로 뛰어오른다
+        if (u > 0 && u < 1) {
+          const fx = x - 30 + u * 60, fy = sea - Math.sin(u * Math.PI) * 34;
+          cx.translate(fx, fy); cx.rotate(Math.cos(u * Math.PI) * -0.9);
+          cx.fillStyle = 'rgba(219,231,238,0.85)';
+          cx.beginPath(); cx.ellipse(0, 0, 8, 3.2, 0, 0, Math.PI * 2); cx.fill();
+          cx.beginPath(); cx.moveTo(-7, 0); cx.lineTo(-12, -4); cx.lineTo(-12, 4); cx.closePath(); cx.fill();
+        }
+      }
+      cx.restore();
+    }
+  }
+
+  function drawBird(x, y, slope, t) {
+    const tilt = Math.atan(slope) * 0.8;
+    const flap = reduceMotion ? 0.4 : Math.sin(t * 5) * 0.5 + 0.2;
+    cx.save(); cx.translate(x, y); cx.rotate(tilt);
+    const glow = cx.createRadialGradient(0, 0, 0, 0, 0, 34);
+    glow.addColorStop(0, 'rgba(245,227,168,0.35)'); glow.addColorStop(1, 'rgba(245,227,168,0)');
+    cx.fillStyle = glow; cx.beginPath(); cx.arc(0, 0, 34, 0, Math.PI * 2); cx.fill();
+    cx.fillStyle = '#eef5f8'; cx.strokeStyle = '#eef5f8'; cx.lineWidth = 2.4; cx.lineJoin = 'round';
+    // 날개
+    cx.beginPath();
+    cx.moveTo(-2, 0); cx.quadraticCurveTo(-10, -12 * flap - 4, -20, -10 * flap);
+    cx.moveTo(2, 0);  cx.quadraticCurveTo(-4, -14 * flap - 6, -12, -16 * flap - 2);
+    cx.stroke();
+    // 몸
+    cx.beginPath(); cx.ellipse(0, 0, 10, 5, 0, 0, Math.PI * 2); cx.fill();
+    cx.beginPath(); cx.moveTo(9, -1); cx.lineTo(15, 1); cx.lineTo(9, 3); cx.closePath();
+    cx.fillStyle = '#f5e3a8'; cx.fill();
+    cx.restore();
+  }
+
+  function drawSparks(dt) {
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const p = sparks[i];
+      p.life -= dt; if (p.life <= 0) { sparks.splice(i, 1); continue; }
+      p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 30 * dt;
+      cx.fillStyle = `rgba(245,227,168,${p.life})`;
+      cx.beginPath(); cx.arc(p.x, p.y, 2, 0, Math.PI * 2); cx.fill();
+    }
+  }
+  function burst(x, y) {
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * Math.PI * 2;
+      sparks.push({ x, y, vx: Math.cos(a) * 60, vy: Math.sin(a) * 60 - 20, life: 1 });
+    }
+  }
+
+  // ---------- 루프 ----------
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    const tRun = (now - t0) / 1000;
+    drawBackdrop(now, running ? Math.min(1, Math.max(0, (tRun - LEAD) / (cycles * CYCLE))) : 0.35);
+    if (running) {
+      const t = tRun;
+      const st = phaseAt(t, cycles);
+      swell(st.height);
+      drawSights(t, now);
+      const { birdY, slope } = drawPath(t);
+      const { birdX, base } = geo();
+      drawBird(birdX, birdY, slope, t);
+
+      // 빛 수집: 호흡 한 번이 끝날 때
+      const done = Math.max(0, Math.min(cycles, Math.floor((t - LEAD) / CYCLE)));
+      if (done > collected) {
+        collected = done; $('lights').textContent = collected; burst(birdX, base - 26); buzz(30);
+        if (collected < cycles) chime();
+        if (collected < cycles) $('hud-count').textContent = cycles - collected;
+        segs.forEach((el, i) => el.className = i < collected ? 'on' : el.className);
+      }
+
+      // 안내 문구
+      const key = st.phase ? st.cycle + st.phase.kind : (st.done ? 'done' : 'lead');
+      if (key !== lastPhaseKey) {
+        lastPhaseKey = key;
+        if (st.phase) {
+          $('cue-word').textContent = st.phase.word; $('cue-how').textContent = st.phase.how;
+          cueSound(st.phase.kind); buzz(st.phase.kind === 'exhale' ? 60 : 20);
+          const note = milestone(st.cycle);
+          $('cue-note').hidden = !note; $('cue-note').textContent = note;
+          segs.forEach((el, i) => el.className = i < collected ? 'on' : i === st.cycle ? 'now' : '');
+        }
+        if (st.done) {
+          $('cue-word').textContent = '도착'; $('cue-how').textContent = '천천히 평소처럼 숨 쉬세요'; $('cue-note').hidden = true;
+          $('hud-goal').textContent = '등대에 도착했어요'; arrive();
+        }
+      }
+      const span = st.phase ? st.phase.sec : LEAD;
+      $('cue-bar').style.width = st.done ? '0%' : `${(1 - st.left / span) * 100}%`;
+      if (st.done && t > LEAD + cycles * CYCLE + 1.2) finish();
+    } else {
+      // 대기 화면: 숨 모양의 길을 따라 새가 등대 쪽으로 날아가는 장면을 미리 보여준다
+      // (공유 링크 썸네일도 이 첫 화면으로 만들어진다)
+      const { base, amp, birdX, pps } = geo();
+      const t = reduceMotion ? 2 : now / 1000;
+      const hy = tt => {
+        let r = ((tt % CYCLE) + CYCLE) % CYCLE;
+        for (const p of WORLD.pattern) { if (r < p.sec) return p.from + (p.to - p.from) * ease(r / p.sec); r -= p.sec; }
+        return 0;
+      };
+      const y = tt => base - hy(tt) * amp * 0.8;
+      cx.lineWidth = 3; cx.lineCap = 'round';
+      cx.strokeStyle = 'rgba(127,214,194,0.8)';
+      cx.beginPath();
+      for (let x = 0; x <= birdX; x += 3) { const tt = t + (x - birdX) / pps; x ? cx.lineTo(x, y(tt)) : cx.moveTo(x, y(tt)); }
+      cx.stroke();
+      cx.setLineDash([2, 9]); cx.strokeStyle = 'rgba(127,214,194,0.45)';
+      cx.beginPath();
+      for (let x = birdX; x <= W + 10; x += 3) { const tt = t + (x - birdX) / pps; x === birdX ? cx.moveTo(x, y(tt)) : cx.lineTo(x, y(tt)); }
+      cx.stroke(); cx.setLineDash([]);
+      for (let k = Math.ceil(t / CYCLE); ; k++) {
+        const x = birdX + (k * CYCLE - t) * pps;
+        if (x > W + 20) break;
+        const rg = cx.createRadialGradient(x, base - 26, 0, x, base - 26, 16);
+        rg.addColorStop(0, 'rgba(245,227,168,0.9)'); rg.addColorStop(1, 'rgba(245,227,168,0)');
+        cx.fillStyle = rg; cx.beginPath(); cx.arc(x, base - 26, 16, 0, Math.PI * 2); cx.fill();
+      }
+      drawBird(birdX, y(t), (y(t + 0.05) - y(t - 0.05)) / (0.1 * pps), t);
+    }
+    drawSparks(dt);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // ---------- 흐름 ----------
+  let segs = [];
+  // 반복이 지루하지 않게 중간중간 위치를 알려준다
+  function milestone(c) {
+    if (c === cycles - 1) return '마지막 호흡이에요';
+    if (cycles >= 4 && c === Math.floor(cycles / 2)) return '절반 왔어요 · 등대가 보여요';
+    if (cycles >= 12 && c === Math.floor(cycles / 4)) return '하늘이 밝아지고 있어요';
+    if (cycles >= 12 && c === Math.floor(cycles * 3 / 4)) return '거의 다 왔어요';
+    return '';
+  }
+
+  function begin() {
+    audioInit(); if (ac && ac.resume) ac.resume(); // 탭 직후에 호출되므로 iOS에서도 소리가 열린다
+    cycles = Math.round(minutes * 60 / CYCLE);
+    collected = 0; lastPhaseKey = '';
+    $('lights').textContent = '0';
+    $('segs').replaceChildren(...Array.from({ length: cycles }, () => document.createElement('i')));
+    segs = [...$('segs').children];
+    $('cue-note').hidden = true;
+    $('hud-goal').innerHTML = `등대까지 숨 <b id="hud-count">${cycles}</b>번`;
+    $('cue-word').textContent = '출발'; $('cue-how').textContent = '어지러우면 언제든 멈춰도 돼요';
+    show('hud');
+    t0 = performance.now(); running = true;
+    startBgm(LEAD + cycles * CYCLE);
+    if (navigator.wakeLock) navigator.wakeLock.request('screen').then(l => wakeLock = l).catch(() => {});
+  }
+  function stopRun() {
+    running = false;
+    stopBgm(false);
+    if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+  }
+  function finish() { stopRun(); show('s-after'); }
+
+  function renderResult() {
+    const n = store.get('breath.sessions', 0) + 1;
+    store.set('breath.sessions', n);
+    $('journey').textContent = collected >= cycles ? `등대 도착` : `${collected} / ${cycles}`;
+    $('r-after').textContent = moodAfter;
+    if (moodBefore == null) {
+      $('change').hidden = true;
+      $('result-title').textContent = moodAfter <= 2 ? '편안한 상태로 마쳤어요' : '숨 고르기를 마쳤어요';
+    } else {
+      $('change').hidden = false;
+      $('r-before').textContent = moodBefore;
+      const d = moodBefore - moodAfter;
+      $('result-title').textContent = d >= 2 ? '확실히 가벼워졌네요' : d === 1 ? '조금 가벼워졌네요' : d === 0 ? '비슷하지만 숨은 골랐어요' : '오늘은 쉽지 않았네요';
+    }
+    show('s-result');
+  }
+
+  // ---------- 이벤트 ----------
+  function renderRoute() {
+    const n = Math.round(minutes * 60 / CYCLE);
+    const shown = Math.min(n, 12); // 점이 너무 많으면 12개로 줄여서 그린다
+    $('route-dots').replaceChildren(...Array.from({ length: shown }, () => document.createElement('i')));
+    $('route-caption').innerHTML = `숨 <b>${n}</b>번 · 약 ${minutes}분`;
+  }
+  renderRoute();
+  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+    minutes = Number(b.dataset.min);
+    document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    renderRoute();
+  }));
+  $('sound').addEventListener('click', () => {
+    soundOn = !soundOn;
+    $('sound').setAttribute('aria-pressed', String(soundOn));
+    bgmOn = soundOn; // 안내음과 배경음을 한 버튼으로
+    $('sound').textContent = soundOn ? '소리 켜짐' : '소리 꺼짐';
+    $('sound').setAttribute('aria-label', $('sound').textContent);
+  });
+  $('go').addEventListener('click', () => { audioInit(); ac && ac.resume && ac.resume(); moodBefore = null; show('s-before'); });
+  document.querySelectorAll('#scale-before button').forEach(b => b.addEventListener('click', () => { moodBefore = Number(b.dataset.v); begin(); }));
+  $('skip-before').addEventListener('click', () => { moodBefore = null; begin(); });
+  document.querySelectorAll('#scale-after button').forEach(b => b.addEventListener('click', () => { moodAfter = Number(b.dataset.v); renderResult(); }));
+  $('stop').addEventListener('click', () => { stopRun(); show('s-after'); });
+})();
+</script>
+</body>
+</html>
